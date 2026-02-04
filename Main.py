@@ -9,16 +9,15 @@ from ppnp.pytorch.training import train_model
 from ppnp.pytorch.earlystopping import stopping_args
 from ppnp.pytorch.propagation import PPRExact, MPPRExact, PPRPowerIteration
 from ppnp.data.io import load_dataset
-from plot_ import plot_box
+from cal_motif import cal_main
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import matplotlib.font_manager as fm
 
 def plot_box(data, title):
-    plt.rcParams["font.family"] = ["Times New Roman", "serif"]  # 若Times New Roman不存在， fallback到serif
-    plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题（避免变成方块）
+    plt.rcParams["font.family"] = ["Times New Roman", "serif"]
+    plt.rcParams["axes.unicode_minus"] = False
 
     sns.set_palette("husl")
     plt.figure(figsize=(4, 3))
@@ -62,19 +61,18 @@ def ppnp(graph_name, per_seed):
     else:
         seeds = val_seeds
 
-    # idx_split_args = {'ntrain_per_class': 10, 'nstopping': 500, 'nknown': 225}
     if graph_name == 'ms_academic':
         alpha = 0.2
     else:
         alpha = 0.1
     alpha = 0.1
-    # prop_ppnp = PPRExact(graph.adj_matrix, alpha=alpha)
-    prop_appnp = PPRPowerIteration(graph.adj_matrix, alpha=alpha, niter=10)
+    prop_ppnp = PPRExact(graph.adj_matrix, alpha=alpha)
+    # prop_appnp = PPRPowerIteration(graph.adj_matrix, alpha=alpha, niter=10)
 
     model_args = {
         'hiddenunits': [64],
         'drop_prob': 0.5,
-        'propagation': prop_appnp}
+        'propagation': prop_ppnp}
 
     reg_lambda = 5e-3
     learning_rate = 0.01
@@ -102,19 +100,10 @@ def ppnp(graph_name, per_seed):
             results.append({})
             test_accs.append(result['valtest']['accuracy'])
             run_time.append(result['runtime'])
-            # print(test_accs)
-            # results[-1]['stopping_accuracy'] = result['early_stopping']['accuracy']
-            # results[-1]['valtest_accuracy'] = result['valtest']['accuracy']
-            # results[-1]['runtime'] = result['runtime']
-            # results[-1]['runtime_perepoch'] = result['runtime_perepoch']
-            # results[-1]['split_seed'] = seed
     pickle_save(test_accs, graph_name + '_ppnp.pkl')
-    # print(np.mean(test_accs), '+-', np.std(test_accs))
-    # print(np.mean(run_time), '+-', np.std(run_time))
     a = str(np.round(np.mean(test_accs), 4)) + '+-' + str(np.round(np.std(test_accs), 4))
     b = str(np.round(np.mean(run_time), 4)) + '+-' + str(np.round(np.std(run_time), 4))
-    print(a, b)
-    return ['PPNP', a, b, test_accs]
+    return ['PPNP', a, b]
 
 idx_split_args = {'ntrain_per_class': 20, 'nstopping': 500, 'nknown': 1500}
 # idx_split_args = {'ntrain_per_class': 2000, 'nstopping': 20000, 'nknown': 120000}
@@ -125,7 +114,8 @@ if __name__ == '__main__':
         datefmt='%Y-%m-%d %H:%M:%S',
         level=logging.INFO + 2)
 
-    graph_name = 'cora' # 'amazon_electronics_computers'
+    graph_name = 'amazon_electronics_computers' # 'amazon_electronics_computers'
+    cal_main(graph_name)
     graph = load_dataset(graph_name, 'ppnp\\dataset_for_paper')
     print(graph.num_nodes(), graph.num_edges())
     graph.standardize(select_lcc=True)
@@ -205,15 +195,6 @@ if __name__ == '__main__':
         pickle_save(test_accs, graph_name +'_mppr_'+  motif_type + '.pkl')
         a = str(np.round(np.mean(test_accs), 4)) + '+-' + str(np.round(np.std(test_accs), 4))
         b = str(np.round(np.mean(run_times), 4)) + '+-' + str(np.round(np.std(run_times), 4))
-        result_.append([motif_type, a, b, test_accs])
+        result_.append([motif_type, a, b])
     headers = ['模体', 'Accuracy', 'time']
     print(tabulate(result_, headers=headers, tablefmt='grid'))
-
-    # tmp = pickle_load('amazon_electronics_photo_ppnp.pkl')
-    # tmp.sort()
-    # tmp = tmp[5:-5]
-    # data_more = [tmp]
-    # # print(result_)
-    # for item in result_:
-    #     data_more.append(item[3])
-    # plot_box(data_more, graph_name)

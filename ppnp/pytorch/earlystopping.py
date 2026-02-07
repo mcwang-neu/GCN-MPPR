@@ -20,7 +20,7 @@ class Best(Enum):
 
 stopping_args = dict(
         stop_varnames=[StopVariable.ACCURACY, StopVariable.LOSS],
-        patience=500, max_epochs=10000, remember=Best.RANKED)
+        patience=100, max_epochs=10000, remember=Best.RANKED)
 
 
 class EarlyStopping:
